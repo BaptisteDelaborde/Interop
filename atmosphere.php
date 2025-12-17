@@ -53,16 +53,19 @@ function getIutCoordinates(string $apiUrl): array {
 // récupération IP client
 $clientIp = getClientIp();
 
-// géolocalisation ip client
-$geoXml = @simplexml_load_file($API_GEOIP . $clientIp);
+// géolocalisation ip client (uniquement si ce n'est pas en local)
+if ($clientIp !== "127.0.0.1" && $clientIp !== "::1") {
 
-if ($geoXml && (string)$geoXml->status === "success") {
-    $lat   = (float)$geoXml->lat;
-    $lon   = (float)$geoXml->lon;
-    $ville = (string)$geoXml->city;
+    $geoXml = @simplexml_load_file($API_GEOIP . $clientIp);
+
+    if ($geoXml && (string)$geoXml->status === "success") {
+        $lat   = (float)$geoXml->lat;
+        $lon   = (float)$geoXml->lon;
+        $ville = (string)$geoXml->city;
+    }
 }
 
-// coordonnées de l'iut si la géolocalisation ip échoue
+// coordonnées de l'iut si la géolocalisation ip échoue ou si on est en local
 $source = "ip";
 
 if ($lat === null || $lon === null) {
@@ -90,7 +93,23 @@ $meteoUrl = "https://www.infoclimat.fr/public-api/gfs/xml"
 $meteoXml = @simplexml_load_file($meteoUrl);
 
 if ($meteoXml === false) {
-    echo "<p>Données météo indisponibles (API Infoclimat en maintenance).</p>";
+    echo "<p>Données météo indisponibles</p>";
 } else {
-    // traitement météo à venir (XSL)
+    // chargement du xml météo
+    $xml = new DOMDocument();
+    $xml->loadXML($meteoXml->asXML());
+
+    // chargement de la feuille xsl
+    $xsl = new DOMDocument();
+    $xsl->load("meteo.xsl");
+
+    // transformation xsl
+    $proc = new XSLTProcessor();
+    $proc->importStylesheet($xsl);
+
+    $meteoHtml = $proc->transformToXML($xml);
+
+    // affichage du fragment html généré
+    echo "<h2>Météo</h2>";
+    echo $meteoHtml;
 }
