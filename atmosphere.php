@@ -1,48 +1,54 @@
 <?php
-// API géolocalisation IP (XML)
+/**************************************************
+ * Interop - atmosphere.php (webetu)
+ * - Géolocalisation IP (XML)
+ * - Fallback IUT (JSON)
+ * - Météo Infoclimat (XML) + XSLT
+ **************************************************/
+
+/*****************************
+ * API
+ *****************************/
+
+// géolocalisation IP (XML)
 $API_GEOIP = "http://ip-api.com/xml/";
 
-// API géocodage IUT (JSON)
+// géocodage IUT (JSON)
 $API_IUT = "https://nominatim.openstreetmap.org/search?format=json&q=IUT+Nancy+Charlemagne&limit=1";
 
-// API météo Infoclimat (XML)
-// ⚠️ Clé API non disponible pour le moment (maintenance Infoclimat)
-$INFOCLIMAT_AUTH = "CLE_INFOCLIMAT_NON_DISPONIBLE";
-$INFOCLIMAT_C    = "SIGNATURE_NON_DISPONIBLE";
+// météo Infoclimat (XML) - URL fournie par l'enseignant
+$API_METEO = "https://www.infoclimat.fr/public-api/gfs/xml?_ll=48.67103,6.15083"
+    . "&_auth=ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D"
+    . "&_c=19f3aa7d766b6ba91191c8be71dd1ab2";
 
 
-$lat   = null;
-$lon   = null;
-$ville = null;
+/*****************************
+ * PROXY WEBETU
+ *****************************/
+
+$context = stream_context_create([
+    'http' => [
+        'proxy' => 'tcp://www-cache:3128',
+        'request_fulluri' => true,
+        'timeout' => 10
+    ],
+    'ssl' => [
+        'verify_peer' => false,
+        'verify_peer_name' => false
+    ]
+]);
+
+
+/*****************************
+ * FONCTIONS
+ *****************************/
 
 // récupère ip client
 function getClientIp(): string {
     if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+        return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
     }
     return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-}
-
-// récupère coordonnées de l'iut via une api
-function getIutCoordinates(string $apiUrl): array {
-    $context = stream_context_create([
-        'http' => [
-            'header' => "User-Agent: InteropDWM/1.0\r\n"
-        ]
-    ]);
-
-    $json = @file_get_contents($apiUrl, false, $context);
-    if ($json === false) {
-        return [null, null];
-    }
-
-    $data = json_decode($json, true);
-
-    if (is_array($data) && isset($data[0]['lat'], $data[0]['lon'])) {
-        return [(float)$data[0]['lat'], (float)$data[0]['lon']];
-    }
-
-    return [null, null];
 }
 
 
@@ -50,32 +56,44 @@ function getIutCoordinates(string $apiUrl): array {
  * GÉOLOCALISATION
  *****************************/
 
-// récupération IP client
 $clientIp = getClientIp();
 
-// géolocalisation ip client (uniquement si ce n'est pas en local)
-if ($clientIp !== "127.0.0.1" && $clientIp !== "::1") {
+$lat = null;
+$lon = null;
+$ville = null;
+$sourceLoc = "ip";
 
-    $geoXml = @simplexml_load_file($API_GEOIP . $clientIp);
-
+// géolocalisation IP (XML)
+$geoContent = @file_get_contents($API_GEOIP . $clientIp, false, $context);
+if ($geoContent !== false) {
+    $geoXml = @simplexml_load_string($geoContent);
     if ($geoXml && (string)$geoXml->status === "success") {
-        $lat   = (float)$geoXml->lat;
-        $lon   = (float)$geoXml->lon;
+        $lat = (float)$geoXml->lat;
+        $lon = (float)$geoXml->lon;
         $ville = (string)$geoXml->city;
     }
 }
 
-// coordonnées de l'iut si la géolocalisation ip échoue ou si on est en local
-$source = "ip";
-
+// fallback IUT (JSON)
 if ($lat === null || $lon === null) {
-    [$lat, $lon] = getIutCoordinates($API_IUT);
-    $source = "iut";
-    $ville  = "IUT Nancy-Charlemagne";
+    $sourceLoc = "iut";
+    $json = @file_get_contents($API_IUT, false, $context);
+    if ($json !== false) {
+        $data = json_decode($json, true);
+        if (is_array($data) && isset($data[0]['lat'], $data[0]['lon'])) {
+            $lat = (float)$data[0]['lat'];
+            $lon = (float)$data[0]['lon'];
+            $ville = "IUT Nancy-Charlemagne";
+        }
+    }
 }
 
+// dernier fallback (ne doit pas planter la page)
 if ($lat === null || $lon === null) {
-    echo "<p>Impossible de déterminer une localisation.</p>";
+    $sourceLoc = "fallback";
+    $lat = 48.6921;
+    $lon = 6.1844;
+    $ville = "Nancy";
 }
 
 
@@ -83,33 +101,31 @@ if ($lat === null || $lon === null) {
  * MÉTÉO (INFCLIMAT)
  *****************************/
 
-// construction url météo
-$meteoUrl = "https://www.infoclimat.fr/public-api/gfs/xml"
-          . "?_ll=$lat,$lon"
-          . "&_auth=$INFOCLIMAT_AUTH"
-          . "&_c=$INFOCLIMAT_C";
-
-// récupération xml météo
-$meteoXml = @simplexml_load_file($meteoUrl);
-
-if ($meteoXml === false) {
+$meteoContent = @file_get_contents($API_METEO, false, $context);
+if ($meteoContent === false) {
     echo "<p>Données météo indisponibles</p>";
-} else {
-    // chargement du xml météo
-    $xml = new DOMDocument();
-    $xml->loadXML($meteoXml->asXML());
-
-    // chargement de la feuille xsl
-    $xsl = new DOMDocument();
-    $xsl->load("meteo.xsl");
-
-    // transformation xsl
-    $proc = new XSLTProcessor();
-    $proc->importStylesheet($xsl);
-
-    $meteoHtml = $proc->transformToXML($xml);
-
-    // affichage du fragment html généré
-    echo "<h2>Météo</h2>";
-    echo $meteoHtml;
+    exit;
 }
+
+
+/*****************************
+ * XSLT
+ *****************************/
+
+$xml = new DOMDocument();
+$xml->loadXML($meteoContent);
+
+$xsl = new DOMDocument();
+$xsl->load("meteo.xsl");
+
+$proc = new XSLTProcessor();
+$proc->importStylesheet($xsl);
+
+// petit contexte utile (optionnel mais propre)
+$proc->setParameter('', 'ville', $ville);
+$proc->setParameter('', 'sourceLoc', $sourceLoc);
+$proc->setParameter('', 'lat', (string)$lat);
+$proc->setParameter('', 'lon', (string)$lon);
+
+// affichage du fragment HTML
+echo $proc->transformToXML($xml);
