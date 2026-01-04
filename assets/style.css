@@ -1,0 +1,31 @@
+/*
+  assets/style.css
+  - CSS unique du projet (pas de CSS dans les XSL)
+  - Important : Leaflet a besoin d'une hauteur sur #map
+*/
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 20px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+#meteo .loc {
+  margin-bottom: 20px;
+}
+
+.meteo-list {
+  margin-top: 8px;
+  margin-bottom: 18px;
+}
+
+/* Carte Leaflet */
+#map {
+  height: 420px;     /* obligatoire sinon la carte ne s'affiche pas bien */
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #ddd;
+}

@@ -2,78 +2,83 @@
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-<xsl:output method="html" encoding="UTF-8"/>
+  <!--
+    meteo.xsl
+    - Produit un FRAGMENT HTML (pas de <html>, pas de <head>)
+    - Résume la journée : Matin / Midi / Soir
+    - Affiche des symboles + infos utiles : température, vent, pluie
+  -->
 
-<xsl:param name="ville"/>
-<xsl:param name="sourceLoc"/>
-<xsl:param name="lat"/>
-<xsl:param name="lon"/>
+  <xsl:output method="html" encoding="UTF-8"/>
 
-<xsl:template match="/">
-  <div>
-    <h2>Météo du jour</h2>
+  <!-- Paramètres transmis par PHP -->
+  <xsl:param name="ville"/>
+  <xsl:param name="sourceLoc"/>
+  <xsl:param name="lat"/>
+  <xsl:param name="lon"/>
 
-    <p>
-      <strong>Localisation :</strong>
-      <xsl:value-of select="$ville"/>
-      (<xsl:value-of select="$sourceLoc"/>)
-      —
-      <xsl:value-of select="$lat"/>, <xsl:value-of select="$lon"/>
-    </p>
+  <xsl:template match="/">
+    <section id="meteo">
+      <h2>Météo du jour</h2>
 
-    <xsl:variable name="e"
-      select="//echeance"/>
+      <p class="loc">
+        <strong>Localisation :</strong>
+        <xsl:value-of select="$ville"/>
+        (<xsl:value-of select="$sourceLoc"/>)
+        — <xsl:value-of select="$lat"/>, <xsl:value-of select="$lon"/>
+      </p>
 
-    <xsl:call-template name="bloc">
-      <xsl:with-param name="titre" select="'Matin'"/>
-      <xsl:with-param name="e" select="$e[1]"/>
-    </xsl:call-template>
+      <!-- On récupère toutes les échéances -->
+      <xsl:variable name="e" select="//echeance"/>
 
-    <xsl:call-template name="bloc">
-      <xsl:with-param name="titre" select="'Midi'"/>
-      <xsl:with-param name="e"
-        select="$e[ceiling(count($e) div 2)]"/>
-    </xsl:call-template>
+      <!-- Matin = première échéance -->
+      <xsl:call-template name="bloc">
+        <xsl:with-param name="titre" select="'Matin'"/>
+        <xsl:with-param name="e" select="$e[1]"/>
+      </xsl:call-template>
 
-    <xsl:call-template name="bloc">
-      <xsl:with-param name="titre" select="'Soir'"/>
-      <xsl:with-param name="e" select="$e[last()]"/>
-    </xsl:call-template>
+      <!-- Midi = au milieu -->
+      <xsl:call-template name="bloc">
+        <xsl:with-param name="titre" select="'Midi'"/>
+        <xsl:with-param name="e" select="$e[ceiling(count($e) div 2)]"/>
+      </xsl:call-template>
 
-  </div>
-</xsl:template>
+      <!-- Soir = dernière échéance -->
+      <xsl:call-template name="bloc">
+        <xsl:with-param name="titre" select="'Soir'"/>
+        <xsl:with-param name="e" select="$e[last()]"/>
+      </xsl:call-template>
 
-<xsl:template name="bloc">
-  <xsl:param name="titre"/>
-  <xsl:param name="e"/>
+    </section>
+  </xsl:template>
 
-  <h3><xsl:value-of select="$titre"/></h3>
+  <!-- Bloc Matin / Midi / Soir -->
+  <xsl:template name="bloc">
+    <xsl:param name="titre"/>
+    <xsl:param name="e"/>
 
-  <!-- Température 2m (Kelvin → Celsius) -->
-  <xsl:variable name="tK"
-    select="number($e/temperature/level[@val='2m'])"/>
-  <xsl:variable name="tC"
-    select="round($tK - 273.15)"/>
+    <h3><xsl:value-of select="$titre"/></h3>
 
-  <!-- Vent moyen à 10m -->
-  <xsl:variable name="wind"
-    select="round(number($e/vent_moyen/level[@val='10m']) * 3.6)"/>
+    <!-- Température 2m (Kelvin -> Celsius) -->
+    <xsl:variable name="tK" select="number($e/temperature/level[@val='2m'])"/>
+    <xsl:variable name="tC" select="round($tK - 273.15)"/>
 
-  <!-- Pluie -->
-  <xsl:variable name="pluie"
-    select="number($e/pluie)"/>
+    <!-- Vent moyen à 10m (m/s -> km/h) -->
+    <xsl:variable name="wind" select="round(number($e/vent_moyen/level[@val='10m']) * 3.6)"/>
 
-  <ul>
-    <li>🌡️ <xsl:value-of select="$tC"/>°C</li>
-    <li>💨 <xsl:value-of select="$wind"/> km/h</li>
-    <li>
-      <xsl:choose>
-        <xsl:when test="$pluie &gt; 0">🌧️ Pluie</xsl:when>
-        <xsl:otherwise>☀️ Pas de pluie</xsl:otherwise>
-      </xsl:choose>
-    </li>
-  </ul>
+    <!-- Pluie -->
+    <xsl:variable name="pluie" select="number($e/pluie)"/>
 
-</xsl:template>
+    <ul class="meteo-list">
+      <li><xsl:value-of select="$tC"/>°C</li>
+      <li><xsl:value-of select="$wind"/> km/h</li>
+      <li>
+        <xsl:choose>
+          <xsl:when test="$pluie &gt; 0">Pluie</xsl:when>
+          <xsl:otherwise>Pas de pluie</xsl:otherwise>
+        </xsl:choose>
+      </li>
+    </ul>
+  </xsl:template>
 
 </xsl:stylesheet>
