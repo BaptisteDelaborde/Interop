@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circulations - Mobilité Douce à Nancy</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="./assets/style2.css">
+</head>
+<body>
+    <header>
+        <h1>🚲 Circulations Nancy</h1>
+        <p>Assistant de mobilité temps réel</p>
+    </header>
+
+    <div class="dashboard">
+        <div class="card" id="decision-panel">
+            <h2>Conseil du moment</h2>
+            <div id="decision-loading">Analyse des données en cours...</div>
+            <div id="decision-content" style="display:none;">
+                <div class="decision-result" id="conseil-texte">...</div>
+                <div id="conseil-details" style="font-size: 0.9rem; opacity: 0.9;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Météo Locale</h2>
+            <div id="meteo-data">Chargement...</div>
+            <p class="timestamp">Mise à jour : <span id="date-meteo">--</span></p>
+        </div>
+
+        <div class="card">
+            <h2>Qualité de l'Air</h2>
+            <div id="air-data" style="display: flex; align-items: center;">
+                <span class="icon-large">🍃</span>
+                <span id="air-index">Chargement...</span>
+            </div>
+            <p class="timestamp">Source : Atmo Grand Est</p>
+        </div>
+
+        <div class="card">
+            <h2>Votre Position (IP)</h2>
+            <p>📍 <span id="geo-ville">Localisation...</span></p>
+            <p style="font-size:0.8rem; color:#666;">(<span id="geo-lat"></span>, <span id="geo-lon"></span>)</p>
+        </div>
+
+        <div class="card" id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Projet Interopérabilité - <a href="#">Lien vers mon Git</a></p>
+        <p>Données brutes issues des APIs :</p>
+        <ul style="list-style: none; padding: 0;">
+            <li><a href="http://ip-api.com/json/" target="_blank">IP-API (Géo)</a></li>
+            <li><a href="https://open-meteo.com/" target="_blank">Open-Meteo (Météo)</a></li>
+            <li><a href="https://www.atmo-grandest.eu/" target="_blank">Atmo Grand Est (Air)</a></li>
+            <li><a href="https://geoservices.grand-nancy.org/arcgis/rest/services/public/OPEN_DATA/MapServer/26" target="_blank">Grand Nancy Open Data (VélOstan)</a></li>
+        </ul>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
