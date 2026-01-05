@@ -150,24 +150,37 @@ if (@$xmlTraffic->loadXML($trafficXml->asXML())) {
   }
 }
 
-
 /* =========================================
-   7) COVID – SRAS
+   7) COVID – SRAS (Eaux usées)
    ========================================= */
 $covidData = [];
-$covidRaw = @file_get_contents($API_COVID, false, $context);
-if ($covidRaw) {
-  $json = json_decode($covidRaw, true);
-  foreach ($json['data'] ?? [] as $row) {
-    if (!empty($row['date'])) {
-      $covidData[] = [
-        'date' => $row['date'],
-        'value' => (float)($row['taux_sars_cov_2'] ?? 0)
-      ];
-    }
-  }
-}
 
+// Nouvelle URL de l'API (Santé Publique France / Odisse)
+// On demande les 50 derniers enregistrements pour Nancy
+$API_COVID = "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/sum-eau-indicateurs/records?where=commune%3D%22NANCY%22&limit=50";
+
+$covidRaw = @file_get_contents($API_COVID, false, $context);
+
+if ($covidRaw) {
+    $json = json_decode($covidRaw, true);
+
+    // La structure JSON contient "results", pas "data"
+    $rows = $json['results'] ?? [];
+
+    // Important : Trier par date (l'API ne les renvoie pas toujours dans l'ordre)
+    usort($rows, function($a, $b) {
+        return strtotime($a['date_complet']) - strtotime($b['date_complet']);
+    });
+
+    foreach ($rows as $row) {
+        if (!empty($row['date_complet'])) {
+            $covidData[] = [
+                'date' => $row['date_complet'],       // Le champ s'appelle "date_complet"
+                'value' => (float)($row['mesure'] ?? 0) // Le champ s'appelle "mesure"
+            ];
+        }
+    }
+}
 /* =========================================
    8) QUALITÉ AIR (Logique équivalente au JS)
    ========================================= */
