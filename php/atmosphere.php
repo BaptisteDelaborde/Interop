@@ -15,17 +15,26 @@
 /* =========================================
    1) Proxy WEBETU
    ========================================= */
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$isWebetu = (strpos($host, 'webetu') !== false);
+
 $opts = [
-  'http' => [
-    'proxy' => 'tcp://www-cache:3128',
-    'request_fulluri' => true,
-    'header' => "User-Agent: Interop-DWM-Charlemagne\r\n"
-  ],
-  'ssl' => [
-    'verify_peer' => false,
-    'verify_peer_name' => false
-  ]
+    'http' => [
+        'timeout' => 10,
+        'header' => "User-Agent: ProjetInterop/1.0\r\n"
+    ],
+    'ssl' => [
+        'verify_peer' => false,
+        'verify_peer_name' => false
+    ]
 ];
+
+// On ajoute le proxy SEULEMENT si on est à la fac
+if ($isWebetu) {
+    $opts['http']['proxy'] = 'tcp://www-cache:3128';
+    $opts['http']['request_fulluri'] = true;
+}
+
 $context = stream_context_create($opts);
 
 /* =========================================
@@ -160,13 +169,54 @@ if ($covidRaw) {
 }
 
 /* =========================================
-   8) QUALITÉ AIR
+   8) QUALITÉ AIR (Logique équivalente au JS)
    ========================================= */
 $airLabel = "Donnée indisponible";
+$airColor = "#333333"; // Couleur par défaut (Gris foncé)
+
+// On utilise f=json au lieu de pjson pour être sûr du format
+// Assurez-vous que $API_AIR contient bien l'URL fournie (Atmo Grand Est)
+// $API_AIR = "https://services3.arcgis.com/Is0UwT37raQYl9Jj/arcgis/rest/services/ind_grandest/FeatureServer/0/query?where=lib_zone%3D%27Nancy%27&outFields=*&f=json";
+
 $airRaw = @file_get_contents($API_AIR, false, $context);
-if ($airRaw) {
-  $air = json_decode($airRaw, true);
-  $airLabel = $air['features'][0]['attributes']['lib_qual'] ?? $airLabel;
+
+if ($airRaw !== false) {
+    $airData = json_decode($airRaw, true);
+
+    if (isset($airData['features']) && count($airData['features']) > 0) {
+
+        // 1. On trie les données par date croissante (comme le .sort() en JS)
+        // L'attribut 'date_ech' est un timestamp
+        usort($airData['features'], function($a, $b) {
+            return $a['attributes']['date_ech'] <=> $b['attributes']['date_ech'];
+        });
+
+        // 2. On cherche la prévision qui correspond à "Aujourd'hui"
+        $forecast = null;
+        $todayYmd = date('Y-m-d'); // Date du jour format "2023-10-12"
+
+        foreach ($airData['features'] as $feature) {
+            // L'API renvoie des millisecondes, on divise par 1000 pour PHP
+            $timestamp = $feature['attributes']['date_ech'] / 1000;
+            $dateFeature = date('Y-m-d', $timestamp);
+
+            if ($dateFeature === $todayYmd) {
+                $forecast = $feature;
+                break; // On a trouvé aujourd'hui !
+            }
+        }
+
+        // 3. Fallback (Comme en JS) : Si on ne trouve pas aujourd'hui, on prend le dernier (le plus récent)
+        if (!$forecast) {
+            $forecast = end($airData['features']);
+        }
+
+        // 4. Extraction des infos
+        if ($forecast) {
+            $airLabel = $forecast['attributes']['lib_qual']; // Ex: "Moyen"
+            $airColor = $forecast['attributes']['coul_qual']; // Ex: "#50CCAA"
+        }
+    }
 }
 ?>
 <!doctype html>
@@ -223,12 +273,14 @@ if ($airRaw) {
     </div>
   </section>
 
-  <section class="section air">
-    <h2>Qualité de l’air du jour</h2>
-    <p class="air-quality">
-      <strong><?= htmlspecialchars($airLabel) ?></strong> – Source : Atmo Grand Est
-    </p>
-  </section>
+    <section class="section air">
+        <h2>Qualité de l’air du jour</h2>
+        <p class="air-quality" style="color: <?= htmlspecialchars($airColor) ?>;">
+            <span style="font-size: 2rem;">🍃</span><br>
+            <strong><?= htmlspecialchars($airLabel) ?></strong>
+        </p>
+        <p style="font-size: 0.9em; color: #666;">Source : Atmo Grand Est</p>
+    </section>
 
 </div>
 <script>

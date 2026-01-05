@@ -82,14 +82,53 @@ body {
 /* --- DISPOSITION SPÉCIFIQUE --- */
 
 /* Météo (Liste générée par XSL) */
-#meteo {
-  display: flex;
-  justify-content: space-between;
+/* --- CORRECTION BUG MÉTÉO --- */
+
+/* Le conteneur principal de la météo ne doit PAS être en flex
+   pour que le Titre et la Localisation soient l'un sous l'autre */
+.section.meteo {
+  display: block;
   text-align: center;
 }
-#meteo h3 { color: var(--primary); margin-bottom: 5px; }
-.meteo-list { list-style: none; padding: 0; font-weight: bold; color: #555; }
 
+.loc-info {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+/* C'est CE bloc qui contient les 3 colonnes en ligne */
+.meteo-colonnes {
+  display: flex;
+  justify-content: space-around; /* Espacement égal */
+  flex-wrap: wrap; /* Passe à la ligne sur petit écran */
+  gap: 15px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+/* Chaque colonne (Matin/Midi/Soir) */
+.meteo-col {
+  flex: 1; /* Largeur égale */
+  min-width: 100px;
+}
+
+.meteo-col h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--primary);
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.meteo-details {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
 /* Carte Trafic & Graphique Covid : PLEINE LARGEUR */
 .section.trafic,
 .section.covid {
