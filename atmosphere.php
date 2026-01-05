@@ -172,49 +172,65 @@ if ($airRaw) {
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Atmosphère – Interopérabilité</title>
-
-<link rel="stylesheet" href="assets/style.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <title>Atmosphère – Interopérabilité</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-<header>
-  <h1>Atmosphère – Interopérabilité</h1>
-  <p><strong>Localisation :</strong> <?= $ville ?> (<?= $sourceLoc ?>)</p>
+<div class="page-container">
+  <header class="page-header">
+    <h1>Atmosphère – Interopérabilité</h1>
 
-  <h3>Ressources utilisées</h3>
-  <ul>
-    <li>Géolocalisation IP : <?= $API_GEOIP ?></li>
-    <li>Météo : https://www.infoclimat.fr/public-api/gfs/xml</li>
-    <li>Trafic : <?= $API_TRAFFIC ?></li>
-    <li>Covid (SUMEAU) : <?= $API_COVID ?></li>
-    <li>Qualité de l’air : <?= $API_AIR ?></li>
-  </ul>
+    <p class="location">
+      <strong>Localisation :</strong> <?= $ville ?> (<?= $sourceLoc ?>)
+    </p>
 
-  <p>
-    Git :
-    <a href="https://github.com/BaptisteDelaborde/Interop" target="_blank">
-      https://github.com/BaptisteDelaborde/Interop
-    </a>
-  </p>
+    <div class="resources">
+      <h3>Ressources utilisées</h3>
+      <ul>
+        <li><strong>Géolocalisation IP :</strong> <?= $API_GEOIP ?></li>
+        <li><strong>Météo :</strong> https://www.infoclimat.fr/public-api/gfs/xml</li>
+        <li><strong>Trafic :</strong> <?= $API_TRAFFIC ?></li>
+        <li><strong>Covid (SUMEAU) :</strong> <?= $API_COVID ?></li>
+        <li><strong>Qualité de l’air :</strong> <?= $API_AIR ?></li>
+      </ul>
 
-  <hr>
-</header>
+      <p class="git-link">
+        Git :
+        <a href="https://github.com/BaptisteDelaborde/Interop" target="_blank">
+          https://github.com/BaptisteDelaborde/Interop
+        </a>
+      </p>
+    </div>
+  </header>
+  <section class="section meteo">
+    <?= $meteoHtml ?>
+  </section>
 
-<?= $meteoHtml ?>
-<?= $traficHtml ?>
+  <section class="section trafic">
+    <?= $traficHtml ?>
+  </section>
 
-<h2>État de la pandémie (SRAS – eaux usées)</h2>
-<canvas id="covidChart" width="700" height="300"></canvas>
+  <section class="section covid">
+    <h2>État de la pandémie (SRAS – eaux usées)</h2>
+    <div class="chart-container">
+      <canvas id="covidChart"></canvas>
+    </div>
+  </section>
 
-<h2>Qualité de l’air du jour</h2>
-<p><strong><?= htmlspecialchars($airLabel) ?></strong> – Source : Atmo Grand Est</p>
+  <section class="section air">
+    <h2>Qualité de l’air du jour</h2>
+    <p class="air-quality">
+      <strong><?= htmlspecialchars($airLabel) ?></strong> – Source : Atmo Grand Est
+    </p>
+  </section>
 
+</div>
 <script>
 const covidData = <?= json_encode($covidData) ?>;
 
@@ -225,7 +241,7 @@ new Chart(document.getElementById('covidChart'), {
     datasets: [{
       label: 'Taux SRAS-CoV-2 (Maxéville)',
       data: covidData.map(d => d.value),
-      borderColor: 'red',
+      borderColor: '#e74c3c',
       tension: 0.3
     }]
   }
@@ -233,5 +249,6 @@ new Chart(document.getElementById('covidChart'), {
 </script>
 
 <script src="map.js" defer></script>
+
 </body>
 </html>
