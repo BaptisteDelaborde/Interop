@@ -245,7 +245,7 @@ if ($airRaw !== false) {
         <li><strong>Géolocalisation IP :</strong> <?= $API_GEOIP ?></li>
         <li><strong>Météo :</strong> https://www.infoclimat.fr/public-api/gfs/xml</li>
         <li><strong>Trafic :</strong> <?= $API_TRAFFIC ?></li>
-        <li><strong>Covid (SUMEAU) :</strong> <?= $API_COVID ?></li>
+        <li><strong>Covid :</strong> <?= $API_COVID ?></li>
         <li><strong>Qualité de l’air :</strong> <?= $API_AIR ?></li>
       </ul>
 
