@@ -2,7 +2,7 @@
  * CONFIGURATION & ETAT GLOBAL
  **************************************************************/
 const state = {
-    lat: 48.6921, // Nancy par défaut
+    lat: 48.6921,
     lon: 6.1844,
     ville: 'Nancy (Défaut)',
     rain: 0,
@@ -11,7 +11,7 @@ const state = {
     airCode: 0
 };
 
-let map; // instance Leaflet
+let map;
 
 document.addEventListener('DOMContentLoaded', init);
 

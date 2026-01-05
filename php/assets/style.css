@@ -1,0 +1,142 @@
+/* --- VARIABLES & BASE --- */
+:root {
+  --primary: #2c3e50;  /* Bleu sombre élégant */
+  --accent: #27ae60;   /* Vert pour les titres */
+  --warning: #e67e22;
+  --danger: #c0392b;
+  --light: #ecf0f1;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f7f6;
+  color: #333;
+}
+
+/* --- LAYOUT PRINCIPAL (GRID) --- */
+/* Correspond à <div class="page-container"> dans ton PHP */
+.page-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+
+/* --- HEADER --- */
+/* Correspond à <header class="page-header"> */
+.page-header {
+  grid-column: 1 / -1; /* Prend toute la largeur de la grille */
+  background: var(--primary);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.page-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 1.8rem;
+}
+
+/* Bloc de ressources dans le header */
+.resources {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  text-align: left;
+}
+.resources h3 { margin-top: 0; font-size: 1rem; color: var(--accent); }
+.resources ul { list-style: none; padding: 0; margin: 0; }
+.resources a { color: #74ebd5; text-decoration: none; }
+.resources a:hover { text-decoration: underline; }
+
+/* --- CARTES (SECTIONS) --- */
+/* Correspond à <section class="section ..."> */
+.section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.section:hover {
+  transform: translateY(-2px); /* Petit effet de survol */
+}
+
+.section h2 {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 10px;
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: var(--primary);
+}
+
+/* --- DISPOSITION SPÉCIFIQUE --- */
+
+/* Météo (Liste générée par XSL) */
+#meteo {
+  display: flex;
+  justify-content: space-between;
+  text-align: center;
+}
+#meteo h3 { color: var(--primary); margin-bottom: 5px; }
+.meteo-list { list-style: none; padding: 0; font-weight: bold; color: #555; }
+
+/* Carte Trafic & Graphique Covid : PLEINE LARGEUR */
+.section.trafic,
+.section.covid {
+  grid-column: 1 / -1; /* Prend toute la largeur */
+}
+
+/* Carte Leaflet */
+#map {
+  height: 450px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Graphique Chart.js */
+.chart-container {
+  position: relative;
+  height: 350px;
+  width: 100%;
+}
+
+/* Qualité de l'air */
+.air-quality {
+  text-align: center;
+  font-size: 1.2rem;
+  margin-top: 20px;
+}
+.air-quality strong {
+  color: var(--accent);
+  font-size: 1.5rem;
+}
+
+/* --- RESPONSIVE MOBILE --- */
+@media (max-width: 768px) {
+  #map {
+    height: 300px;
+  }
+  .chart-container {
+    height: 250px;
+  }
+  /* Sur mobile, tout passe en une colonne */
+  .page-container {
+    grid-template-columns: 1fr;
+  }
+  /* Sur mobile, la météo passe en colonne */
+  #meteo {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
