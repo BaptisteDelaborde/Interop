@@ -1,10 +1,7 @@
-/**************************************************************
- * CONFIGURATION & ETAT GLOBAL
- **************************************************************/
 const state = {
     lat: 48.6921,
     lon: 6.1844,
-    ville: 'Nancy (Défaut)',
+    ville: 'Nancy',
     rain: 0,
     temp: 0,
     airQual: 'Inconnue',
@@ -12,35 +9,29 @@ const state = {
 };
 
 let map;
-
 document.addEventListener('DOMContentLoaded', init);
-
 async function init() {
     console.log("Démarrage de l'application...");
 
-    // 1. Géolocalisation
+    // Géolocalisation
     await fetchGeolocation();
 
-    // 2. Initialiser la carte
+    // Initialiser la carte
     initMap();
 
-    // 3. Lancer les appels en parallèle
+    // Lancer les appels en parallèle
     await Promise.all([
         fetchWeather(),
-        fetchAirQuality(), // <--- Version corrigée
-        fetchVelos()       // <--- Version JCDecaux
+        fetchAirQuality(),
+        fetchVelos()
     ]);
 
-    // 4. Prendre la décision
     makeDecision();
 }
 
+/* Géolocalisation */
 
-/**************************************************************
- * 1. GÉOLOCALISATION (IP-API)
- **************************************************************/
 async function fetchGeolocation() {
-    // Utiliser http:// en local. Si hébergé en https, le navigateur bloquera (Mixed Content).
     const url = 'http://ip-api.com/json/';
     try {
         const response = await fetch(url);
@@ -52,7 +43,7 @@ async function fetchGeolocation() {
             state.ville = data.city;
         }
     } catch (error) {
-        console.warn("Géo échouée (probablement bloqueur pub ou https), fallback Nancy.");
+        console.warn("Géolocalisation échouée.");
     }
 
     document.getElementById('geo-ville').textContent = state.ville;
@@ -60,10 +51,8 @@ async function fetchGeolocation() {
     document.getElementById('geo-lon').textContent = state.lon;
 }
 
+/* Carte */
 
-/**************************************************************
- * 2. CARTE LEAFLET
- **************************************************************/
 function initMap() {
     map = L.map('map').setView([state.lat, state.lon], 14);
 
@@ -76,10 +65,8 @@ function initMap() {
         .openPopup();
 }
 
+/* Météo */
 
-/**************************************************************
- * 3. MÉTÉO (Open-Meteo)
- **************************************************************/
 async function fetchWeather() {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${state.lat}&longitude=${state.lon}&current_weather=true`;
 
@@ -111,10 +98,8 @@ async function fetchWeather() {
     }
 }
 
+/* Qualité de l'air */
 
-/**************************************************************
- * 4. QUALITÉ AIR (Atmo Grand Est - ArcGIS)
- **************************************************************/
 async function fetchAirQuality() {
     const url = "https://services3.arcgis.com/Is0UwT37raQYl9Jj/arcgis/rest/services/ind_grandest/FeatureServer/0/query?where=lib_zone%3D%27Nancy%27&outFields=*&f=json";
 
@@ -124,40 +109,31 @@ async function fetchAirQuality() {
 
         if (data.features && data.features.length > 0) {
 
-            // 1. Trouver la date d'aujourd'hui (sans les heures/minutes)
             const today = new Date();
             today.setHours(0,0,0,0);
 
-            // 2. Chercher dans la liste l'élément qui correspond à aujourd'hui
-            // date_ech est un timestamp en millisecondes
             let forecast = data.features.find(item => {
                 const itemDate = new Date(item.attributes.date_ech);
                 itemDate.setHours(0,0,0,0);
                 return itemDate.getTime() === today.getTime();
             });
 
-            // 3. Si on ne trouve pas "aujourd'hui" (ex: bug date), on prend le dernier élément dispo (le plus récent)
             if (!forecast) {
-                // On trie par date pour être sûr d'avoir le dernier
                 data.features.sort((a, b) => a.attributes.date_ech - b.attributes.date_ech);
                 forecast = data.features[data.features.length - 1];
             }
 
             const attr = forecast.attributes;
 
-            // Mise à jour des variables globales
-            state.airQual = attr.lib_qual; // Ex: "Moyen"
-            state.airCode = attr.code_qual; // Ex: 2
+            state.airQual = attr.lib_qual;
+            state.airCode = attr.code_qual;
 
-            // Mise à jour affichage
             const el = document.getElementById('air-index');
             el.textContent = state.airQual;
 
-            // On utilise la couleur fournie par l'API (coul_qual)
             if (attr.coul_qual) {
                 el.style.color = attr.coul_qual;
             } else {
-                // Fallback si pas de couleur
                 el.style.color = state.airCode > 3 ? "red" : "green";
             }
 
@@ -170,10 +146,8 @@ async function fetchAirQuality() {
     }
 }
 
+/* Vélo */
 
-/**************************************************************
- * 5. VÉLOS (API JCDecaux / Cyclocity GBFS)
- **************************************************************/
 async function fetchVelos() {
     const urlInfo = "https://api.cyclocity.fr/contracts/nancy/gbfs/v3/station_information.json";
     const urlStatus = "https://api.cyclocity.fr/contracts/nancy/gbfs/v3/station_status.json";
@@ -187,7 +161,6 @@ async function fetchVelos() {
         const dataInfo = await resInfo.json();
         const dataStatus = await resStatus.json();
 
-        // Mapping ID -> Status pour accès rapide
         const statusMap = {};
         dataStatus.data.stations.forEach(stat => {
             statusMap[stat.station_id] = stat;
@@ -231,9 +204,7 @@ async function fetchVelos() {
 }
 
 
-/**************************************************************
- * 6. DÉCISION
- **************************************************************/
+/* Changement de couleur */
 function makeDecision() {
     document.getElementById('decision-loading').style.display = 'none';
     document.getElementById('decision-content').style.display = 'block';
@@ -258,6 +229,5 @@ function makeDecision() {
         txt.textContent = "🚌 Privilégiez le bus.";
         txt.style.color = "#c0392b";
     }
-
     det.textContent = reasons.length > 0 ? "Info : " + reasons.join(", ") : "Conditions idéales.";
 }

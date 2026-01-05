@@ -1,7 +1,7 @@
-/* --- VARIABLES & BASE --- */
+/* varibles */
 :root {
-  --primary: #2c3e50;  /* Bleu sombre élégant */
-  --accent: #27ae60;   /* Vert pour les titres */
+  --primary: #2c3e50;
+  --accent: #27ae60;
   --warning: #e67e22;
   --danger: #c0392b;
   --light: #ecf0f1;
@@ -15,8 +15,7 @@ body {
   color: #333;
 }
 
-/* --- LAYOUT PRINCIPAL (GRID) --- */
-/* Correspond à <div class="page-container"> dans ton PHP */
+/* Layout */
 .page-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -26,10 +25,9 @@ body {
   padding: 0 15px;
 }
 
-/* --- HEADER --- */
-/* Correspond à <header class="page-header"> */
+/* Header */
 .page-header {
-  grid-column: 1 / -1; /* Prend toute la largeur de la grille */
+  grid-column: 1 / -1;
   background: var(--primary);
   color: white;
   padding: 20px;
@@ -43,7 +41,6 @@ body {
   font-size: 1.8rem;
 }
 
-/* Bloc de ressources dans le header */
 .resources {
   background-color: rgba(255, 255, 255, 0.1);
   padding: 10px;
@@ -57,8 +54,7 @@ body {
 .resources a { color: #74ebd5; text-decoration: none; }
 .resources a:hover { text-decoration: underline; }
 
-/* --- CARTES (SECTIONS) --- */
-/* Correspond à <section class="section ..."> */
+/* Carte */
 .section {
   background: white;
   border-radius: 8px;
@@ -68,7 +64,7 @@ body {
 }
 
 .section:hover {
-  transform: translateY(-2px); /* Petit effet de survol */
+  transform: translateY(-2px);
 }
 
 .section h2 {
@@ -79,13 +75,6 @@ body {
   color: var(--primary);
 }
 
-/* --- DISPOSITION SPÉCIFIQUE --- */
-
-/* Météo (Liste générée par XSL) */
-/* --- CORRECTION BUG MÉTÉO --- */
-
-/* Le conteneur principal de la météo ne doit PAS être en flex
-   pour que le Titre et la Localisation soient l'un sous l'autre */
 .section.meteo {
   display: block;
   text-align: center;
@@ -96,20 +85,18 @@ body {
   color: #555;
 }
 
-/* C'est CE bloc qui contient les 3 colonnes en ligne */
 .meteo-colonnes {
   display: flex;
-  justify-content: space-around; /* Espacement égal */
-  flex-wrap: wrap; /* Passe à la ligne sur petit écran */
+  justify-content: space-around;
+  flex-wrap: wrap;
   gap: 15px;
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #eee;
 }
 
-/* Chaque colonne (Matin/Midi/Soir) */
 .meteo-col {
-  flex: 1; /* Largeur égale */
+  flex: 1;
   min-width: 100px;
 }
 
@@ -129,10 +116,9 @@ body {
   font-size: 0.95rem;
   line-height: 1.6;
 }
-/* Carte Trafic & Graphique Covid : PLEINE LARGEUR */
 .section.trafic,
 .section.covid {
-  grid-column: 1 / -1; /* Prend toute la largeur */
+  grid-column: 1 / -1;
 }
 
 /* Carte Leaflet */
@@ -143,7 +129,6 @@ body {
   border: 1px solid #ddd;
 }
 
-/* Graphique Chart.js */
 .chart-container {
   position: relative;
   height: 350px;
@@ -161,7 +146,7 @@ body {
   font-size: 1.5rem;
 }
 
-/* --- RESPONSIVE MOBILE --- */
+/* Responsive */
 @media (max-width: 768px) {
   #map {
     height: 300px;
@@ -169,11 +154,9 @@ body {
   .chart-container {
     height: 250px;
   }
-  /* Sur mobile, tout passe en une colonne */
   .page-container {
     grid-template-columns: 1fr;
   }
-  /* Sur mobile, la météo passe en colonne */
   #meteo {
     flex-direction: column;
     gap: 20px;

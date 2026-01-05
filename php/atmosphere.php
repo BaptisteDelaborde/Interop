@@ -1,20 +1,7 @@
 <?php
-/**************************************************
- * atmosphere.php  (WEBETU)
- * Interopérabilité – DWM
- *
- * Objectifs :
- * - Géolocalisation IP CLIENT (XML)
- * - Fallback IUT Charlemagne si ≠ Nancy
- * - Météo (XML + XSL)
- * - Trafic (Open Data Grand Est + Leaflet)
- * - Covid (SRAS – eaux usées SUMEAU)
- * - Qualité de l’air (Atmo Grand Est)
- **************************************************/
 
-/* =========================================
-   1) Proxy WEBETU
-   ========================================= */
+/* proxy pour webetu */
+
 $host = $_SERVER['HTTP_HOST'] ?? '';
 $isWebetu = (strpos($host, 'webetu') !== false);
 
@@ -29,7 +16,6 @@ $opts = [
     ]
 ];
 
-// On ajoute le proxy SEULEMENT si on est à la fac
 if ($isWebetu) {
     $opts['http']['proxy'] = 'tcp://www-cache:3128';
     $opts['http']['request_fulluri'] = true;
@@ -37,9 +23,8 @@ if ($isWebetu) {
 
 $context = stream_context_create($opts);
 
-/* =========================================
-   2) IP CLIENT
-   ========================================= */
+/* ip client */
+
 function getClientIp(): string {
   if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
     return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
@@ -47,28 +32,26 @@ function getClientIp(): string {
   return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 }
 
-/* =========================================
-   3) APIs
-   ========================================= */
+/* toutes nos API */
+
 $API_GEOIP  = "http://ip-api.com/xml/";
 $API_IUT    = "https://nominatim.openstreetmap.org/search?format=json&q=IUT+Nancy+Charlemagne&limit=1";
 
-/* METEO */
+/* météo */
 $INFOCLIMAT_AUTH = "ARsDFFIsBCZRfFtsD3lSe1Q8ADUPeVRzBHgFZgtuAH1UMQNgUTNcPlU5VClSfVZkUn8AYVxmVW0Eb1I2WylSLgFgA25SNwRuUT1bPw83UnlUeAB9DzFUcwR4BWMLYwBhVCkDb1EzXCBVOFQoUmNWZlJnAH9cfFVsBGRSPVs1UjEBZwNkUjIEYVE6WyYPIFJjVGUAZg9mVD4EbwVhCzMAMFQzA2JRMlw5VThUKFJiVmtSZQBpXGtVbwRlUjVbKVIuARsDFFIsBCZRfFtsD3lSe1QyAD4PZA%3D%3D";
 $INFOCLIMAT_C = "19f3aa7d766b6ba91191c8be71dd1ab2";
 
-/* TRAFIC */
-$API_TRAFFIC = "https://services.data.gouv.fr/api/datasets/perturbations-circulation-grand-est/records";
+/* trafic */
+$API_TRAFFIC = "https://carto.g-ny.eu/data/cifs/cifs_waze_v2.json";
 
-/* COVID – SUMEAU */
-$API_COVID = "https://tabular-api.data.gouv.fr/api/resources/2963ccb5-344d-4978-bdd3-08aaf9efe514/data/?commune__contains=Maxe";
+/* Covid  */
+$API_COVID = "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/sum-eau-indicateurs/records?where=commune%3D%22NANCY%22&limit=50";
 
-/* AIR */
+/* Air */
 $API_AIR = "https://services3.arcgis.com/Is0UwT37raQYl9Jj/arcgis/rest/services/ind_grandest/FeatureServer/0/query?where=lib_zone%3D%27Nancy%27&outFields=*&f=pjson";
 
-/* =========================================
-   4) Géolocalisation IP + fallback IUT
-   ========================================= */
+/* Géolocalisation IP ou IUT */
+
 $clientIp = getClientIp();
 $lat = $lon = null;
 $ville = null;
@@ -95,9 +78,8 @@ if (!$lat || !$lon || strtolower($ville) !== "nancy") {
   }
 }
 
-/* =========================================
-   5) METEO (XML → XSL)
-   ========================================= */
+/* Météo */
+
 $meteoHtml = "<p>Météo indisponible.</p>";
 $API_METEO = "https://www.infoclimat.fr/public-api/gfs/xml?_ll=$lat,$lon&_auth=$INFOCLIMAT_AUTH&_c=$INFOCLIMAT_C";
 
@@ -116,58 +98,73 @@ if ($meteoRaw) {
   }
 }
 
-/* =========================================
-   6) TRAFIC (laissé tel quel)
-   ========================================= */
+/* Trafic */
 $traficHtml = "<p>Aucune donnée trafic.</p>";
+
 $trafficRaw = @file_get_contents($API_TRAFFIC, false, $context);
 
 $trafficXml = new SimpleXMLElement("<traffic/>");
+$trafficData = [];
 
 if ($trafficRaw) {
-  $json = json_decode($trafficRaw, true);
-  foreach (($json['records'] ?? []) as $r) {
-    $f = $r['fields'] ?? [];
-    if (!isset($f['geo_point_2d'][0], $f['geo_point_2d'][1])) continue;
+    $json = json_decode($trafficRaw, true);
 
-    $i = $trafficXml->addChild("incident");
-    $i->addChild("lat", (string)$f['geo_point_2d'][0]);
-    $i->addChild("lon", (string)$f['geo_point_2d'][1]);
-    $i->addChild("type", htmlspecialchars($f['type'] ?? "Incident"));
-    $i->addChild("debut", htmlspecialchars($f['date_debut'] ?? ""));
-    $i->addChild("fin", htmlspecialchars($f['date_fin'] ?? ""));
-  }
+    foreach (($json['incidents'] ?? []) as $inc) {
+        if (isset($inc['location']['polyline'])) {
+            $coords = explode(' ', $inc['location']['polyline']);
+            if (count($coords) >= 2) {
+                $lat = $coords[0];
+                $lon = $coords[1];
+
+                $type = htmlspecialchars($inc['type'] ?? 'INCIDENT');
+
+                $desc = htmlspecialchars($inc['short_description'] ?? $inc['description'] ?? '');
+                $debut = htmlspecialchars($inc['starttime'] ?? '');
+                $fin = htmlspecialchars($inc['endtime'] ?? '');
+
+                $node = $trafficXml->addChild("incident");
+                $node->addChild("lat", $lat);
+                $node->addChild("lon", $lon);
+                $node->addChild("type", $type);
+                $node->addChild("description", $desc);
+                $node->addChild("debut", $debut);
+                $node->addChild("fin", $fin);
+
+                $trafficData[] = [
+                    'lat' => (float)$lat,
+                    'lon' => (float)$lon,
+                    'type' => $type,
+                    'desc' => $desc,
+                    'debut' => $debut,
+                    'fin' => $fin
+                ];
+            }
+        }
+    }
 }
 
 $xmlTraffic = new DOMDocument();
+
 if (@$xmlTraffic->loadXML($trafficXml->asXML())) {
-  $xslTraffic = new DOMDocument();
-  if (@$xslTraffic->load("trafic.xsl")) {
-    $proc = new XSLTProcessor();
-    $proc->importStylesheet($xslTraffic);
-    $tmp = $proc->transformToXML($xmlTraffic);
-    if ($tmp) $traficHtml = $tmp;
-  }
+    $xslTraffic = new DOMDocument();
+
+    if (@$xslTraffic->load("trafic.xsl")) {
+        $proc = new XSLTProcessor();
+        $proc->importStylesheet($xslTraffic);
+        $tmp = $proc->transformToXML($xmlTraffic);
+        if ($tmp) $traficHtml = $tmp;
+    }
 }
 
-/* =========================================
-   7) COVID – SRAS (Eaux usées)
-   ========================================= */
+/* Covid */
+
 $covidData = [];
-
-// Nouvelle URL de l'API (Santé Publique France / Odisse)
-// On demande les 50 derniers enregistrements pour Nancy
-$API_COVID = "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/sum-eau-indicateurs/records?where=commune%3D%22NANCY%22&limit=50";
-
 $covidRaw = @file_get_contents($API_COVID, false, $context);
 
 if ($covidRaw) {
     $json = json_decode($covidRaw, true);
-
-    // La structure JSON contient "results", pas "data"
     $rows = $json['results'] ?? [];
 
-    // Important : Trier par date (l'API ne les renvoie pas toujours dans l'ordre)
     usort($rows, function($a, $b) {
         return strtotime($a['date_complet']) - strtotime($b['date_complet']);
     });
@@ -175,21 +172,16 @@ if ($covidRaw) {
     foreach ($rows as $row) {
         if (!empty($row['date_complet'])) {
             $covidData[] = [
-                'date' => $row['date_complet'],       // Le champ s'appelle "date_complet"
-                'value' => (float)($row['mesure'] ?? 0) // Le champ s'appelle "mesure"
+                'date' => $row['date_complet'],
+                'value' => (float)($row['mesure'] ?? 0)
             ];
         }
     }
 }
-/* =========================================
-   8) QUALITÉ AIR (Logique équivalente au JS)
-   ========================================= */
-$airLabel = "Donnée indisponible";
-$airColor = "#333333"; // Couleur par défaut (Gris foncé)
+/* Qualité de l'air */
 
-// On utilise f=json au lieu de pjson pour être sûr du format
-// Assurez-vous que $API_AIR contient bien l'URL fournie (Atmo Grand Est)
-// $API_AIR = "https://services3.arcgis.com/Is0UwT37raQYl9Jj/arcgis/rest/services/ind_grandest/FeatureServer/0/query?where=lib_zone%3D%27Nancy%27&outFields=*&f=json";
+$airLabel = "Donnée indisponible";
+$airColor = "#333333";
 
 $airRaw = @file_get_contents($API_AIR, false, $context);
 
@@ -198,36 +190,30 @@ if ($airRaw !== false) {
 
     if (isset($airData['features']) && count($airData['features']) > 0) {
 
-        // 1. On trie les données par date croissante (comme le .sort() en JS)
-        // L'attribut 'date_ech' est un timestamp
         usort($airData['features'], function($a, $b) {
             return $a['attributes']['date_ech'] <=> $b['attributes']['date_ech'];
         });
 
-        // 2. On cherche la prévision qui correspond à "Aujourd'hui"
         $forecast = null;
-        $todayYmd = date('Y-m-d'); // Date du jour format "2023-10-12"
+        $todayYmd = date('Y-m-d');
 
         foreach ($airData['features'] as $feature) {
-            // L'API renvoie des millisecondes, on divise par 1000 pour PHP
             $timestamp = $feature['attributes']['date_ech'] / 1000;
             $dateFeature = date('Y-m-d', $timestamp);
 
             if ($dateFeature === $todayYmd) {
                 $forecast = $feature;
-                break; // On a trouvé aujourd'hui !
+                break;
             }
         }
 
-        // 3. Fallback (Comme en JS) : Si on ne trouve pas aujourd'hui, on prend le dernier (le plus récent)
         if (!$forecast) {
             $forecast = end($airData['features']);
         }
 
-        // 4. Extraction des infos
         if ($forecast) {
-            $airLabel = $forecast['attributes']['lib_qual']; // Ex: "Moyen"
-            $airColor = $forecast['attributes']['coul_qual']; // Ex: "#50CCAA"
+            $airLabel = $forecast['attributes']['lib_qual'];
+            $airColor = $forecast['attributes']['coul_qual'];
         }
     }
 }
@@ -298,7 +284,7 @@ if ($airRaw !== false) {
 </div>
 <script>
 const covidData = <?= json_encode($covidData) ?>;
-
+window.trafficData = <?= json_encode($trafficData) ?>;
 new Chart(document.getElementById('covidChart'), {
   type: 'line',
   data: {

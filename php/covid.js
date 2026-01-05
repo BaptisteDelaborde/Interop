@@ -1,16 +1,3 @@
-/**
- * covid.js
- * Interopérabilité – DWM
- *
- * Affichage de la dynamique Covid (SRAS-CoV-2)
- * à partir des données des eaux usées (SUMEAU)
- * via Chart.js
- *
- * Les données sont injectées par atmosphere.php
- * sous la forme :
- *   const covidData = [{ date: "...", value: ... }, ...]
- */
-
 document.addEventListener("DOMContentLoaded", () => {
 
   if (typeof covidData === "undefined" || covidData.length === 0) {
